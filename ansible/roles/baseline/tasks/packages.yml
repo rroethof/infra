@@ -1,0 +1,166 @@
+---
+- name: Installeer python3-pexpect
+  ansible.builtin.apt:
+    name: python3-pexpect
+    state: present
+    update_cache: true
+
+- name: Installeer python3-passlib
+  become: true
+  ansible.builtin.package:
+    name: python3-passlib
+    state: present
+  register: python3_passlib
+  failed_when:
+    - python3_passlib.rc is defined
+    - python3_passlib.rc != 0
+
+- name: Installeer Python pip passlib
+  become: true
+  when:
+    - python3_passlib.rc is defined
+    - python3_passlib.rc != 0
+  block:
+    - name: Python3-pip installatie
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+
+    - name: Pip passlib installatie
+      ansible.builtin.pip:
+        name: passlib
+        state: present
+
+- name: Generieke pakketverwijdering
+  become: true
+  ansible.builtin.package:
+    name: "{{ packages_blocklist }}"
+    state: absent
+  register: package_removal
+  failed_when:
+    - package_removal is not success
+    - not "No package" in package_removal.msg
+
+- name: Configureer needrestart
+  become: true
+  block:
+    - name: Registreer needrestart configuratiemap
+      ansible.builtin.stat:
+        path: /etc/needrestart/conf.d
+      register: needrestart_directory_created
+
+    - name: Maak needrestart map aan
+      ansible.builtin.file:
+        path: /etc/needrestart/conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+        recurse: true
+      when:
+        - '"needrestart" in packages'
+        - not needrestart_directory_created.stat.exists
+
+    - name: Controleer needrestart configuratiemap
+      ansible.builtin.stat:
+        path: /etc/needrestart/conf.d
+      register: needrestart_directory
+
+    - name: Haal needrestart herstartwaarde op
+      ansible.builtin.command:
+        cmd: grep -Rqo "$nrconf{restart} = 'l';" /etc/needrestart/conf.d/
+      register: needrestart_restart_set
+      when:
+        - needrestart_directory.stat.exists
+      changed_when: needrestart_restart_set.rc != 0
+      failed_when: needrestart_restart_set.rc > 1
+
+    - name: Configureer needrestart
+      ansible.builtin.lineinfile:
+        path: /etc/needrestart/conf.d/00-restart.conf
+        line: $nrconf{restart} = 'l';
+        create: true
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - needrestart_directory.stat.exists
+        - needrestart_restart_set.rc != 0
+
+- name: Installeer generieke Debian pakketten
+  become: true
+  ansible.builtin.apt:
+    name: "{{ packages_install }}"
+    state: present
+    install_recommends: false
+    update_cache: true
+  when:
+    - packages_install | length > 0
+  notify:
+    - Run apt-get clean
+    - Run apt-get autoremove
+
+- name: Voer apt purge uit
+  become: true
+  ansible.builtin.apt:
+    name: "{{ packages_blocklist }}"
+    state: absent
+    purge: true
+  register: apt_purge
+  failed_when:
+    - apt_purge is not success
+    - not "No package" in apt_purge.msg
+  notify:
+    - Run apt-get clean
+    - Run apt-get autoremove
+
+- name: VMWare package installation
+  become: true
+  ansible.builtin.package:
+    name: open-vm-tools
+    state: present
+
+- name: Install rng-tools
+  become: true
+  ansible.builtin.package:
+    name: rng-tools
+    state: present
+  when:
+    - ansible_local.cpuinfo.rdrand
+
+- name: Stat sysstat default
+  become: true
+  ansible.builtin.stat:
+    path: /etc/default/sysstat
+  register: default_sysstat
+
+- name: Enable sysstat
+  become: true
+  ansible.builtin.lineinfile:
+    regexp: ^ENABLED
+    line: ENABLED="true"
+    dest: /etc/default/sysstat
+    mode: "0644"
+    state: present
+    create: false
+    backrefs: true
+  when:
+    - default_sysstat.stat.exists
+
+- name: Remove unneeded Debian dependencies
+  become: true
+  ansible.builtin.apt:
+    autoclean: true
+    autoremove: true
+    clean: true
+  changed_when: false
+
+- name: Run apt-get autoremove
+  become: true
+  ansible.builtin.apt:
+    autoremove: true
+
+- name: Run apt-get clean
+  become: true
+  ansible.builtin.apt:
+    clean: true

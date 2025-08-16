@@ -1,0 +1,41 @@
+- name: Zorg ervoor dat de sysctl configuratiemap de juiste permissies heeft
+  become: true
+  ansible.builtin.file:
+    path: "{{ sysctl_conf_dir }}"
+    mode: "0755"
+    owner: root
+    group: root
+    state: directory
+
+- name: Zorg ervoor dat het oude sysctl bestand is verwijderd
+  become: true
+  ansible.builtin.file:
+    path: "{{ sysctl_conf_dir }}/zz-hardening.conf"
+    state: absent
+
+- name: Template het sysctl bestand met algemene sysctl hardening instellingen
+  become: true
+  ansible.builtin.template:
+    src: "etc/sysctl/sysctl.main.conf.j2"
+    dest: "{{ sysctl_conf_dir }}/zz-main-hardening.conf"
+    mode: "0644"
+    owner: root
+    group: root
+    backup: false
+  notify:
+    - Restart sysctl
+
+- name: Template sysctl bestand met IPv6 instellingen
+  become: true
+  ansible.builtin.template:
+    src: "etc/sysctl/sysctl.ipv6.conf.j2"
+    dest: "{{ sysctl_conf_dir }}/zz-ipv6-hardening.conf"
+    mode: "0644"
+    owner: root
+    group: root
+    backup: false
+  when:
+    - system_has_ipv6
+    - not disable_ipv6
+  notify:
+    - Restart sysctl

@@ -1,0 +1,9 @@
+---
+motd_exclude_disk_space:
+  - tmpfs
+  - devtmpfs
+  - overlay
+
+motd_exclude_interfaces:
+  - veth
+  - br

@@ -1,0 +1,2 @@
+---
+systemd_default_limit_core: 0

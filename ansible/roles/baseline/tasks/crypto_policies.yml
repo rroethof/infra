@@ -1,0 +1,42 @@
+---
+- name: Stel cryptobeleid in
+  # Stelt het systeemwijde cryptobeleid in.
+  become: true
+  when:
+    - set_crypto_policy
+  block:
+    - name: Haal cryptobeleidswaarde op
+      # Controleert de huidige waarde van het cryptobeleid.
+      environment:
+        PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      ansible.builtin.command:
+        cmd: grep -iqo "^{{ crypto_policy }}$" /etc/crypto-policies/config
+      register: crypto_policy_set
+      changed_when: false
+      failed_when: crypto_policy_set.rc > 1
+      when:
+        - crypto_policies_config
+
+    - name: Werk cryptobeleid bij
+      # Werkt het systeemwijde cryptobeleid bij naar de gespecificeerde waarde.
+      ansible.builtin.command:
+        cmd: update-crypto-policies --set "{{ crypto_policy | upper }}"
+      register: update_crypto_policies
+      changed_when: update_crypto_policies.rc != 0
+      failed_when: update_crypto_policies.rc != 0
+      when:
+        - crypto_policies_config
+        - crypto_policy_set.rc != 0
+        - crypto_policy.split(':')[0] | upper != "FIPS"
+
+    - name: Stel FIPS-modus in
+      # Schakelt de FIPS-modus in indien het cryptobeleid dit vereist.
+      ansible.builtin.command:
+        cmd: fips-mode-setup --enable
+      register: set_fips_mode
+      changed_when: set_fips_mode.rc != 0
+      failed_when: set_fips_mode.rc != 0
+      when:
+        - crypto_policies_config
+        - crypto_policy_set.rc != 0
+        - crypto_policy.split(':')[0] | upper == "FIPS"

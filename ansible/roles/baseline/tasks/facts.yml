@@ -1,0 +1,112 @@
+---
+- name: Voeg aangepaste feiten toe
+  # Voegt aangepaste feiten toe aan Ansible's feitenverzameling.
+  become: true
+  block:
+    - name: Maak aangepaste feiten directory aan
+      # Zorgt ervoor dat de directory voor aangepaste feiten bestaat.
+      ansible.builtin.file:
+        path: /etc/ansible/facts.d
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: Voeg systemd versie feit toe
+      # Voegt een feit toe over de systemd-versie.
+      ansible.builtin.template:
+        src: etc/ansible/facts.d/systemd.fact
+        dest: /etc/ansible/facts.d/systemd.fact
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: Voeg cpuinfo rdrand feit toe
+      # Voegt een feit toe over de cpuinfo rdrand-mogelijkheid.
+      ansible.builtin.template:
+        src: etc/ansible/facts.d/cpuinfo.fact
+        dest: /etc/ansible/facts.d/cpuinfo.fact
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: Voeg ssh sleutels feit toe
+      # Voegt een feit toe over de SSH-sleutels.
+      ansible.builtin.template:
+        src: etc/ansible/facts.d/sshkeys.fact
+        dest: /etc/ansible/facts.d/sshkeys.fact
+        mode: "0755"
+        owner: root
+        group: root
+
+- name: Controleer IPv6 status
+  # Controleert de aanwezigheid van IPv6 op het systeem.
+  become: true
+  ansible.builtin.stat:
+    path: /proc/sys/net/ipv6
+  register: stat_ipv6
+
+- name: Stel IPv6 feit in
+  # Stelt een feit in dat aangeeft of IPv6 aanwezig is.
+  ansible.builtin.set_fact:
+    system_has_ipv6: "{{ stat_ipv6.stat.exists }}"
+
+- name: Stel sysctl configuratie directory in als feit
+  # Stelt een feit in over de sysctl configuratie directory.
+  block:
+    - name: Controleer of /usr/lib/sysctl.d/ bestaat
+      # Controleert of de standaard sysctl directory bestaat.
+      ansible.builtin.stat:
+        path: /usr/lib/sysctl.d/
+      register: usr_lib_sysctl_d
+
+    - name: Stel sysctl feit in
+      # Stelt een feit in over het bestaan van de sysctl directory.
+      ansible.builtin.set_fact:
+        usr_lib_sysctl_d_dir: "{{ true if usr_lib_sysctl_d.stat.exists else false }}"
+
+- name: Stel cryptobeleid configuratie in als feit
+  # Stelt een feit in over de aanwezigheid van het cryptobeleid configuratiebestand.
+  block:
+    - name: Controleer cryptobeleid configuratie
+      # Controleert of het cryptobeleid configuratiebestand bestaat.
+      ansible.builtin.stat:
+        path: /etc/crypto-policies/config
+      register: stat_crypto_policies_config
+
+    - name: Stel configuratie feit in
+      # Stelt een feit in over het bestaan van het cryptobeleid configuratiebestand.
+      ansible.builtin.set_fact:
+        crypto_policies_config: "{{ stat_crypto_policies_config.stat.exists }}"
+
+- name: Haal PAM versie op
+  # Haalt de versie van PAM (Pluggable Authentication Modules) op.
+  block:
+    - name: Verzamel pakketfeiten
+      # Verzamel feiten over geïnstalleerde pakketten.
+      ansible.builtin.package_facts:
+
+    - name: Haal libpam versie op in Debian familie
+      # Haalt de versie van libpam-modules op Debian-gebaseerde systemen.
+      ansible.builtin.set_fact:
+        pam_version: "{{ ansible_facts.packages['libpam-modules'][0].version }}"
+      when:
+        - "'libpam-modules' in ansible_facts.packages"
+
+- name: Stel hashing algoritme in voor wachtwoord (yescrypt|sha512)
+  # Stelt het te gebruiken hashing algoritme in voor wachtwoorden.
+  ansible.builtin.set_fact:
+    password_algorithm: "{{ 'yescrypt' if (pam_version is version('1.4.0', '>=')) else 'sha512' }}"
+
+- name: Configureer apt apt mounts
+  # Configureert APT om mount-opties te respecteren.
+  ansible.builtin.template:
+    src: "etc/apt/apt.conf.d/99mount.j2"
+    dest: /etc/apt/apt.conf.d/99mount
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Werk huidige feiten bij
+  # Werkt alle feiten van het systeem bij.
+  ansible.builtin.setup:

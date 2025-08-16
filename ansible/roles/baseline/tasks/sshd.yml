@@ -1,0 +1,242 @@
+- name: Zorg ervoor dat de privilege separation directory bestaat
+  become: true
+  ansible.builtin.file:
+    path: /run/sshd
+    owner: root
+    group: root
+    state: directory
+    mode: "0755"
+
+- name: Controleer sysconfig sshd configuratie
+  ansible.builtin.stat:
+    path: /etc/sysconfig/sshd
+  register: sysconfig_sshd
+
+- name: Verwijder sshd systeem crypto beleid
+  become: true
+  ansible.builtin.lineinfile:
+    dest: /etc/sysconfig/sshd
+    state: absent
+    regexp: ^\s*CRYPTO_POLICY.*$
+  when:
+    - sysconfig_sshd.stat.exists
+
+- name: Haal sshd Include configuratie op
+  become: true
+  ansible.builtin.command:
+    cmd: grep -E "^Include " /etc/ssh/sshd_config
+  register: grep_include
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Controleer of sshd_config.d bestaat
+  ansible.builtin.stat:
+    path: /etc/ssh/sshd_config.d
+  register: sshd_config_d
+
+- name: Wis bestaande aangepaste configuraties in /etc/ssh/sshd_config.d
+  when:
+    - sshd_config_d_force_clear | bool
+    - sshd_config_d.stat.exists
+  block:
+    - name: Zoek bestaande aangepaste configuraties in /etc/ssh/sshd_config.d
+      become: true
+      ansible.builtin.find:
+        path: /etc/ssh/sshd_config.d
+        patterns: "*"
+      register: sshd_config_d_content
+
+    - name: Wis bestaande aangepaste configuraties in /etc/ssh/sshd_config.d
+      become: true
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ sshd_config_d_content.files }}"
+
+- name: Zorg voor de juiste permissies voor /etc/ssh/sshd_config
+  become: true
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    state: file
+    mode: "0600"
+
+- name: SSH moduli bestand
+  become: true
+  when:
+    - sshd_update_moduli
+  tags:
+    - ssh
+  block:
+    - name: Controleer moduli bestand
+      ansible.builtin.stat:
+        path: /etc/ssh/moduli
+      register: ssh_moduli
+
+    - name: Werk moduli bestand bij
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/konstruktoid/ssh-moduli/main/moduli
+        dest: "{{ '/etc/ssh/' if ssh_moduli.stat.exists else '/etc/' }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+- name: Zoek DSA host bestanden
+  become: true
+  ansible.builtin.find:
+    paths: /etc/ssh
+    patterns: "*_host_dsa_key*"
+  register: dsa_files
+
+- name: Verwijder DSA host bestanden
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ dsa_files.files }}"
+
+- name: Stel standaardwaarde in voor sshd_host_keys_files indien niet opgegeven
+  become: true
+  when:
+    - not sshd_host_keys_files
+  block:
+    - name: Genereer SSH Ed25519 sleutelpaar
+      community.crypto.openssh_keypair:
+        state: present
+        type: ed25519
+        path: /etc/ssh/ssh_host_ed25519_key
+        regenerate: partial_idempotence
+
+    - name: Stel hostkeys in volgens openssh-versie als openssh >= 6.5
+      ansible.builtin.set_fact:
+        sshd_host_keys_files:
+          - /etc/ssh/ssh_host_rsa_key
+          - /etc/ssh/ssh_host_ecdsa_key
+          - /etc/ssh/ssh_host_ed25519_key
+
+- name: Schakel PAM dynamische MOTD uit
+  become: true
+  community.general.pamd:
+    name: sshd
+    type: session
+    control: optional
+    module_path: pam_motd.so
+    state: absent
+    backup: true
+  when:
+    - sshd_use_pam | bool
+    - not (sshd_print_pam_motd | bool)
+
+- name: Voeg pam_motd-regel toe aan sshd PAM-configuratie
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    insertafter: '^@include common-session'
+    line: 'session    optional     pam_motd.so  motd=/run/motd.dynamic'
+    state: present
+
+
+- name: Voeg pam_motd-regel toe met noupdate aan sshd PAM-configuratie
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    insertafter: '^session    optional     pam_motd.so  motd=/run/motd.dynamic'
+    line: 'session optional pam_motd.so noupdate'
+    state: present
+
+- name: Controleer variabele sshd_config_force_replace
+  ansible.builtin.set_fact:
+    sshd_config_force_replace: true
+  when: >
+    sshd_match_users | length > 0 or
+    sshd_match_groups | length > 0 or
+    sshd_match_addresses | length > 0 or
+    sshd_match_local_ports | length > 0 or
+    (sshd_sftp_only_group is defined and sshd_sftp_only_group | length != 0)
+
+- name: Configureer sshd
+  become: true
+  ansible.builtin.template:
+    src: "{{ sshd_config_template }}"
+    dest: /etc/ssh/sshd_config
+    backup: true
+    mode: "0600"
+    owner: root
+    group: root
+    validate: /usr/sbin/sshd -T -C user=root -C host=localhost -C addr=localhost -C lport=22 -f %s
+  when: >
+    (sshd_config_force_replace | bool) or
+    (not sshd_config_d.stat.exists) or
+    (grep_include.rc != 0)
+  notify:
+    - Restart sshd service
+
+- name: Configureer sshd met behulp van sshd_config.d
+  become: true
+  ansible.builtin.template:
+    src: "etc/ssh/sshd_config.j2"
+    dest: /etc/ssh/sshd_config.d/01-hardening.conf
+    backup: true
+    mode: "0600"
+    owner: root
+    group: root
+    validate: /usr/sbin/sshd -T -C user=root -C host=localhost -C addr=localhost -C lport=22 -f %s
+  when:
+    - not (sshd_config_force_replace | bool)
+    - sshd_config_d.stat.exists
+    - grep_include.rc == 0
+  notify:
+    - Restart sshd service
+    - Restart ssh service
+
+- name: Verwijder mogelijke Subsystem duplicaten
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: ^Subsystem.*
+    state: absent
+  when:
+    - not (sshd_config_force_replace | bool)
+    - sshd_config_d.stat.exists
+    - grep_include.rc == 0
+
+- name: Controleer sshd host keys
+  become: true
+  ansible.builtin.find:
+    paths: /etc/ssh
+    file_type: file
+    patterns: ssh_host_*
+    excludes: "*.pub"
+  register: ssh_host_keys
+
+- name: Stel sshd host key permissies in
+  become: true
+  ansible.builtin.file:
+    owner: "{{ sshd_host_keys_owner }}"
+    group: "{{ sshd_host_keys_group }}"
+    mode: "{{ sshd_host_keys_mode }}"
+    path: "{{ item.path }}"
+  loop: "{{ ssh_host_keys.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Configureer ssh
+  tags:
+    - ssh
+  block:
+    - name: Controleer of ssh_config.d bestaat
+      ansible.builtin.stat:
+        path: /etc/ssh/ssh_config.d
+      register: ssh_config_d
+
+    - name: Configureer ssh client
+      become: true
+      ansible.builtin.template:
+        src: "etc/ssh/ssh_config.j2"
+        dest: /etc/ssh/ssh_config
+        backup: true
+        mode: "0644"
+        owner: root
+        group: root

@@ -1,0 +1,6 @@
+---
+fallback_ntp:
+  - 1.nl.pool.ntp.org
+  - 2.nl.pool.ntp.org
+ntp:
+  - 0.nl.pool.ntp.org

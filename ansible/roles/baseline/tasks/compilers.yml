@@ -1,0 +1,24 @@
+---
+- name: Find path for compiler binaries
+  ansible.builtin.command:
+    cmd: "which {{ item }}"
+  register: compiler_paths
+  loop: "{{ compilers }}"
+  changed_when: false
+  ignore_errors: true  # Optional: suppresses errors if a compiler is not found
+
+- name: Show found compilers
+  debug:
+    msg: "{{ item.item }} => {{ item.stdout }}"
+  loop: "{{ compiler_paths.results }}"
+  when: not item.failed
+
+- name: Restrict compiler access to root
+  become: true
+  ansible.builtin.file:
+    path: "{{ item.stdout }}"
+    owner: root
+    group: root
+    mode: '0750'
+  loop: "{{ compiler_paths.results }}"
+  when: not item.failed

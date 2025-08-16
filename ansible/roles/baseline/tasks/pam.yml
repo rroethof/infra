@@ -1,0 +1,44 @@
+- name: Configureer faillock.conf
+  become: true
+  ansible.builtin.template:
+    src: "etc/security/faillock.conf.j2"
+    dest: /etc/security/faillock.conf
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer common-password
+  become: true
+  ansible.builtin.template:
+    src: "etc/pam.d/common-password.j2"
+    dest: /etc/pam.d/common-password
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer common-auth
+  become: true
+  ansible.builtin.template:
+    src: "etc/pam.d/common-auth.j2"
+    dest: /etc/pam.d/common-auth
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer common-account
+  become: true
+  ansible.builtin.template:
+    src: "etc/pam.d/common-account.j2"
+    dest: /etc/pam.d/common-account
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer login
+  become: true
+  ansible.builtin.template:
+    src: "etc/pam.d/login.j2"
+    dest: /etc/pam.d/login
+    mode: "0644"
+    owner: root
+    group: root

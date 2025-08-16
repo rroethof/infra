@@ -1,0 +1,20 @@
+---
+- name: Stel een juridische banner in voor /etc/issue
+  # Plaatst een waarschuwingsbanner in /etc/issue die wordt getoond voor lokale logins.
+  become: true
+  ansible.builtin.copy:
+    content: "{{ legal_banner_text }}"
+    dest: /etc/issue
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Stel een juridische banner in voor /etc/issue.net
+  # Plaatst een waarschuwingsbanner in /etc/issue.net die wordt getoond voor remote logins (zoals SSH).
+  become: true
+  ansible.builtin.copy:
+    content: "{{ legal_banner_text }}"
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: '0644'

@@ -1,0 +1,77 @@
+- name: Configureer systemd system.conf
+  become: true
+  ansible.builtin.template:
+    src: "etc/systemd/system.conf.j2"
+    dest: /etc/systemd/system.conf
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+  notify:
+    - Reload systemd
+
+- name: Configureer systemd user.conf
+  become: true
+  ansible.builtin.template:
+    src: "etc/systemd/user.conf.j2"
+    dest: /etc/systemd/user.conf
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+  notify:
+    - Reload systemd
+
+- name: Configureer systemd journald.conf
+  become: true
+  ansible.builtin.template:
+    src: "etc/systemd/journald.conf.j2"
+    dest: /etc/systemd/journald.conf
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+  notify:
+    - Reload systemd
+
+- name: Schakel systemd-journal-remote uit
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - systemd-journal-remote.socket
+    - systemd-journal-remote.service
+  register: mask_journal_remote
+  failed_when:
+    - mask_journal_remote is not success
+    - not "Could not find the requested service" in mask_journal_remote.msg
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Schakel kdump service uit
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+    masked: true
+  register: mask_kdump
+  failed_when:
+    - mask_kdump is not success
+    - not "Could not find the requested service" in mask_kdump.msg
+  loop:
+    - kdump.service
+    - kdump-tools.service
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Maskeer systemd debug-shell
+  become: true
+  ansible.builtin.systemd:
+    name: debug-shell.service
+    masked: true
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]

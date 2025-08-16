@@ -1,0 +1,3 @@
+[all]
+noc-ct01 ansible_host=192.168.250.123 ansible_user=root
+

@@ -1,0 +1,77 @@
+---
+- name: Configureer apt
+  # Voegt hardening opties toe aan de APT configuratie.
+  ansible.builtin.lineinfile:
+    dest: /etc/apt/apt.conf.d/98-hardening
+    mode: "0644"
+    state: present
+    create: true
+    line: "{{ item }}"
+  loop: "{{ apt_hardening_options }}"
+
+- name: Voer apt update uit
+  # Werkt de lijst met beschikbare pakketten bij.
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 1800
+
+- name: Voer apt upgrade uit
+  # Voert een veilige upgrade uit van geïnstalleerde pakketten.
+  ansible.builtin.apt:
+    upgrade: safe
+  register: apt_upgrade_response
+  changed_when:
+    - "'0 upgraded, 0 newly installed, 0 to remove' not in apt_upgrade_response.stdout"
+  notify:
+    - Run apt-get clean
+    - Run apt-get autoremove
+
+- name: Installeer apt-listchanges
+  # Installeert apt-listchanges om wijzigingen in pakketten te tonen.
+  ansible.builtin.apt:
+    name: apt-listchanges
+    state: present
+    install_recommends: false
+
+- name: Installeer unattended-upgrades
+  # Installeert het unattended-upgrades pakket.
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+    update_cache: true
+  notify:
+    - Run apt-get clean
+    - Run apt-get autoremove
+
+- name: Configureer unattended-upgrades pakketlijsten updates
+  # Configureert unattended-upgrades om pakketlijsten periodiek bij te werken.
+  ansible.builtin.lineinfile:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    line: APT::Periodic::Update-Package-Lists "1";
+    regexp: ^APT::Periodic::Update-Package-Lists
+    state: present
+    owner: root
+    group: root
+    mode: "0644"
+    create: true
+
+- name: Configureer unattended-upgrades upgrade interval
+  # Configureert het interval voor automatische upgrades.
+  ansible.builtin.lineinfile:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    line: APT::Periodic::Unattended-Upgrade "1";
+    regexp: ^APT::Periodic::Unattended-Upgrade
+    state: present
+    owner: root
+    group: root
+    mode: "0644"
+    create: true
+
+- name: Configureer unattended-upgrades
+  # Configureert het hoofdbestand voor unattended-upgrades.
+  ansible.builtin.template:
+    src: "etc/apt/apt.conf.d/50unattended-upgrades.j2"
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    mode: "0644"
+    owner: root
+    group: root

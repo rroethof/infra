@@ -1,0 +1,17 @@
+---
+- name: Configureer debsums voor periodieke controles
+  # Configureert /etc/default/debsums om wekelijkse controles via de standaard cron-taak
+  # (geleverd door het debsums-pakket) in te schakelen. Dit is de standaardmethode
+  # die door tools als Lynis wordt herkend.
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/default/debsums
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+    owner: root
+    group: root
+    mode: '0644'
+    create: true
+  loop:
+    - { key: 'CRON_CHECK', value: '"weekly"' }
+    - { key: 'CRON_OPTS', value: '"--silent --changed"' }

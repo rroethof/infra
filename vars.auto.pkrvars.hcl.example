@@ -1,0 +1,42 @@
+# vars.auto.pkrvars.hcl.example
+# vsphere credentials
+vsphere_server          = "192.168.x.x"           # Het IP-adres of de hostname van de vSphere-server waar de VM wordt aangemaakt (bijv. 192.168.x.x).
+vsphere_datacenter      = "DC-XXX"                # De naam van het datacenter in vSphere waar de VM wordt geplaatst.
+cluster                 = "CLUSTER-XXX"           # De naam van het cluster in vSphere waar de VM wordt gehost.
+datastore               = "DATASTORE-XXX"         # De naam van de datastore waar de VM-schijven worden opgeslagen.
+network_name            = "NETWORK-XXX"           # De naam van het netwerk waar de VM op wordt aangesloten.
+iso_paths = [
+    "[DATASTORE-XXX] contentlib-XXXX/debian-13.0.0-amd64-netinst_XXXX.iso"
+]                                                 # Een lijst met paden naar de ISO-bestanden die gebruikt worden voor de installatie (pas aan met je eigen ISO-pad).
+
+# vm general configs
+vm_guest_id             = "debian12_64Guest"      # De gast-ID voor vSphere die het besturingssysteem aangeeft (hier Debian 12 64-bit).
+ssh_username            = "root"                  # De gebruikersnaam voor SSH-toegang tot de VM na installatie.
+ssh_password            = "VERVANG-DIT"           # Het wachtwoord voor SSH-toegang tot de VM na installatie (vervang door een sterk, uniek wachtwoord).
+vm_name                 = "VM-EXAMPLE-CT01"       # De naam van de virtuele machine zoals deze in vSphere zal verschijnen.
+host_name               = "vm-example-ct01"       # De hostname van de VM binnen het netwerk.
+vm_cpus                 = 4                       # Het aantal CPU's dat aan de VM wordt toegewezen.
+vm_ram                  = 8192                    # Het RAM-geheugen in MB dat aan de VM wordt toegewezen (8192 MB = 8 GB).
+vm_disk_size            = 102400                  # De grootte van de schijf in MB die aan de VM wordt toegewezen (102400 MB = 100 GB).
+vm_ip                   = "192.168.x.x"           # Het statische IP-adres voor de VM tijdens installatie; laat leeg voor DHCP.
+vm_gateway              = "192.168.x.x"           # Het gateway-adres voor de VM.
+iso_checksum            = "sha256:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" # De checksum (SHA256) van de ISO om de integriteit te verifiëren (vervang door de juiste checksum van je ISO).
+
+preseed_ip              = "x.x.x.x"               # Het IP-adres waar de preseed-configuratie wordt gehost.
+
+# Netwerk-instellingen
+vm_netmask              = "255.255.255.0"         # Het subnetmasker voor de VM (standaard /24, pas aan indien nodig).
+vm_nameservers          = "x.x.x.x x.x.x.x"       # Een spatie-gescheiden lijst van DNS-servers voor de VM (bijv. interne DNS-servers).
+
+# Lokalisatie-instellingen
+language                = "en"                    # De taal voor de installatie (standaard "en" voor Engels; pas aan naar "nl" voor Nederlands).
+country                 = "NL"                    # Het land voor de installatie (standaard "NL" voor Nederland; pas aan naar je land).
+locale                  = "en_NL.UTF-8"           # De locale-instelling (standaard "en_NL.UTF-8" voor Engels met Nederlandse instellingen; pas aan).
+keyboard                = "nl"                    # De toetsenbordindeling (standaard "nl" voor Nederlands; pas aan naar je voorkeur).
+
+# Klok-instellingen
+timezone                = "Europe/Amsterdam"      # De tijdzone voor de VM (pas aan naar jouw tijdzone, bijv. "Europe/Amsterdam" voor CEST).
+system_clock_in_utc     = false                   # Of de systeemklok in UTC is ingesteld (standaard "false" voor lokale tijd, bijv. bij dual-boot met Windows).
+
+# Pakket-instellingen
+mirror                  = "ftp.nl.debian.org"     # De hostname van de Debian-pakketspiegel (standaard "ftp.nl.debian.org" voor Nederland; pas aan naar een lokale mirror).

@@ -1,0 +1,118 @@
+---
+- name: Configureer Kernel parameters
+  # Configureert diverse kernelparameters voor systeembeveiliging en -gedrag.
+  become: true
+  block:
+    - name: Configureer virtuele systeemoproepen
+      # Schakelt virtuele systeemoproepen uit via GRUB-parameters op Debian-systemen.
+      ansible.builtin.lineinfile:
+        line: GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX vsyscall=none"
+        dest: /etc/default/grub.d/99-hardening-vsyscall.cfg
+        state: present
+        create: true
+        mode: "0640"
+        owner: root
+        group: root
+      when:
+        - not allow_virtual_system_calls
+      notify:
+        - Update GRUB
+
+    - name: Configureer page poisoning
+      # Schakelt page poisoning in via GRUB-parameters op Debian-systemen.
+      ansible.builtin.lineinfile:
+        line: GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX page_poison=1"
+        dest: /etc/default/grub.d/99-hardening-page-poison.cfg
+        state: present
+        create: true
+        mode: "0640"
+        owner: root
+        group: root
+      when:
+        - enable_page_poisoning
+      notify:
+        - Update GRUB
+
+    - name: Configure I/O scheduler
+      # Stelt de I/O scheduler in via GRUB-parameters. 'deadline' is een goede all-round keuze.
+      ansible.builtin.lineinfile:
+        line: GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX elevator={{ kernel_io_scheduler }}"
+        dest: /etc/default/grub.d/99-hardening-io-scheduler.cfg
+        state: present
+        create: true
+        mode: "0640"
+        owner: root
+        group: root
+      when:
+        - kernel_io_scheduler is defined
+        - kernel_io_scheduler | length > 0
+      notify:
+        - Update GRUB
+
+    - name: Configureer page table isolation
+      # Configureert page table isolation via GRUB-parameters op Debian-systemen.
+      ansible.builtin.lineinfile:
+        line: GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX pti={{ 'on' if page_table_isolation else 'auto' }}"
+        dest: /etc/default/grub.d/99-hardening-pti.cfg
+        state: present
+        create: true
+        mode: "0640"
+        owner: root
+        group: root
+      notify:
+        - Update GRUB
+
+    - name: Configureer SLUB debugger poisoning
+      # Schakelt SLUB debugger poisoning in via GRUB-parameters op Debian-systemen.
+      ansible.builtin.lineinfile:
+        line: GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX slub_debug=P"
+        dest: /etc/default/grub.d/99-hardening-slub-debug.cfg
+        state: present
+        create: true
+        mode: "0640"
+        owner: root
+        group: root
+      when:
+        - slub_debugger_poisoning
+      notify:
+        - Update GRUB
+
+    - name: Configureer kernel lockdown
+      # Configureert de kernel lockdown-modus.
+      when:
+        - kernel_lockdown is defined
+        - ansible_kernel is version("5.4", ">=")
+      block:
+        - name: Stel kernel lockdown modus in als feit
+          # Stelt een feit in over de kernel lockdown-modus.
+          ansible.builtin.set_fact:
+            kernel_lockdown: >-
+              {% if kernel_lockdown == "integrity" %}
+                integrity
+              {% elif kernel_lockdown == "confidentiality" %}
+                confidentiality
+              {% elif kernel_lockdown %}
+                integrity
+              {% else %}
+                none
+              {% endif %}
+
+        - name: Configureer kernel lockdown modus
+          # Configureert de kernel lockdown-modus via GRUB-parameters op Debian-systemen.
+          ansible.builtin.lineinfile:
+            line: GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX lockdown={{ kernel_lockdown | trim }}"
+            dest: /etc/default/grub.d/99-hardening-lockdown.cfg
+            state: present
+            create: true
+            mode: "0640"
+            owner: root
+            group: root
+          notify:
+            - Update GRUB
+
+- name: Zorg ervoor dat kmod is geïnstalleerd
+  # Zorgt ervoor dat het 'kmod' pakket is geïnstalleerd.
+  become: true
+  ansible.builtin.package:
+    name: kmod
+    state: present

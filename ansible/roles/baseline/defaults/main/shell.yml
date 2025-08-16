@@ -1,0 +1,70 @@
+---
+# Of Zsh en Oh My Zsh geïnstalleerd moeten worden.
+zsh_install: true
+
+# Of Oh My Zsh geïnstalleerd moet worden voor de gebruikers in zsh_users.
+# Kan per gebruiker overschreven worden.
+zsh_install_omz: true
+
+# Of er een backup van .zshrc gemaakt moet worden bij wijzigingen.
+zsh_omz_backup_zshrc: true
+
+# Git repository voor Oh My Zsh
+zsh_omz_git_repo: 'https://github.com/ohmyzsh/ohmyzsh.git'
+
+# Installatiedirectory voor Oh My Zsh (relatief aan de home directory van de gebruiker)
+zsh_omz_install_dir: '.oh-my-zsh'
+
+# Of de Oh My Zsh repository geüpdatet moet worden bij elke run.
+zsh_omz_git_update: true
+
+# Of .zshrc beheerd moet worden met een template.
+zsh_omz_manage_zshrc: true
+
+# Pad naar de bron-template voor .zshrc.
+zsh_omz_zshrc_template: "shell/zshrc.zsh-template.j2"
+
+# Of een bestaand .zshrc-bestand overschreven moet worden.
+zsh_omz_zshrc_force: false
+
+# Of .zshrc in /etc/skel geplaatst moet worden voor nieuwe gebruikers.
+zsh_omz_populate_skel: true
+
+# Oh My Zsh thema.
+zsh_omz_theme: "bira"
+
+# Oh My Zsh plugins.
+zsh_omz_plugins:
+  - git
+
+# Aanvullende Oh My Zsh instellingen.
+zsh_omz_case_sensitive: false
+zsh_omz_hyphen_insensitive: false
+zsh_omz_disable_auto_update: false
+zsh_omz_update_zsh_days: 13
+zsh_omz_disable_ls_colors: false
+zsh_omz_disable_auto_title: false
+zsh_omz_enable_correction: true
+zsh_omz_completion_waiting_dots: true
+zsh_omz_disable_untracked_files_dirty: false
+zsh_omz_hist_stamps: "dd.mm.yyyy"
+
+# Pad naar de custom-map van Oh My Zsh.
+zsh_omz_zsh_custom: ""
+
+# Lijst van gebruikers om Zsh en Oh My Zsh voor te configureren.
+# Voorbeeld:
+zsh_users:
+  - name: root
+#   - name: rroethof
+#     group: rroethof # Optioneel, standaard de naam van de gebruiker
+#     theme: "agnoster"
+#     plugins:
+#       - git
+#       - zsh-autosuggestions
+#       - zsh-syntax-highlighting
+#     manage_zshrc: false # Overschrijf de globale instelling
+#     install_omz: false
+#     settings: |
+#       export EDITOR=vim
+#       export PAGER=less

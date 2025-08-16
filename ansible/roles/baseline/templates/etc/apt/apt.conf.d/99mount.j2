@@ -1,0 +1,5 @@
+// if /tmp and /var are mounted non-executable
+DPkg::Pre-Invoke { "mount -o remount,exec /tmp"; };
+DPkg::Pre-Invoke { "mount -o remount,exec /var"; };
+DPkg::Post-Invoke { "mount -o remount /tmp"; };
+DPkg::Post-Invoke { "mount -o remount /var"; };

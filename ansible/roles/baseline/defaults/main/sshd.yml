@@ -1,0 +1,235 @@
+# SSHD Ansible variabelen voor hardening
+---
+# Sta alleen LANG en LC_* omgevingsvariabelen toe
+sshd_accept_env: LANG LC_*
+
+# Beperk admin toegang tot localhost (127.0.0.1)
+sshd_admin_net: []
+
+# Schakel agent forwarding uit, dit is een beveiligingsrisico
+sshd_allow_agent_forwarding: false
+
+# Sta alle gebruikers in deze groepen toe, leeg betekent alle groepen
+sshd_allow_groups: []
+
+# Schakel TCP forwarding uit, dit is een beveiligingsrisico
+sshd_allow_tcp_forwarding: false
+
+# Sta alle gebruikers in deze lijst toe, leeg betekent alle gebruikers
+sshd_allow_users: []
+
+# Sta alle authenticatiemethoden toe (publickey, password etc.)
+sshd_authentication_methods: any
+
+# Locatie van het bestand met toegestane principals voor certificaat-authenticatie
+sshd_authorized_principals_file: /etc/ssh/auth_principals/%u
+
+# Toon een bannerbestand voor de loginprompt
+sshd_banner: /etc/issue.net
+
+# Gebruik moderne algoritmes voor certificaathandtekeningen
+sshd_ca_signature_algorithms:
+  - ssh-ed25519
+  - ecdsa-sha2-nistp256
+  - ecdsa-sha2-nistp384
+  - ecdsa-sha2-nistp521
+# GEEN ssh-rsa meer!
+
+# Schakel keyboard-interactive authenticatie uit
+sshd_kbd_interactive_authentication: false
+
+# Gebruik sterke, moderne AEAD ciphers
+sshd_ciphers:
+  - chacha20-poly1305@openssh.com
+  - aes256-gcm@openssh.com
+# GEEN aes256-ctr meer!
+
+# Beëindig de sessie na 1 poging als de client niet reageert
+sshd_client_alive_count_max: 1
+
+# Stuur elke 200 seconden een keep-alive bericht
+sshd_client_alive_interval: 200
+
+# Schakel compressie uit voor betere prestaties en beveiliging
+sshd_compression: false
+
+# Forceer het opschonen van alle bestanden in de /etc/ssh/sshd_config.d directory
+sshd_config_d_force_clear: false
+
+# Forceer de vervanging van sshd_config in plaats van samenvoegen
+sshd_config_force_replace: false
+
+# Schakel de standaard Debian banner uit
+sshd_debian_banner: false
+
+# Weiger alle gebruikers in deze groepen
+sshd_deny_groups: []
+
+# Weiger alle gebruikers in deze lijst
+sshd_deny_users: []
+
+# Schakel GSSAPI-authenticatie uit, vaak niet nodig en kan complex zijn
+sshd_gssapi_authentication: false
+
+# Gebruik sterke, moderne algoritmes voor de host-sleutels
+sshd_host_key_algorithms:
+  - ssh-ed25519-cert-v01@openssh.com
+  - ecdsa-sha2-nistp521-cert-v01@openssh.com
+  - ecdsa-sha2-nistp384-cert-v01@openssh.com
+  - ecdsa-sha2-nistp256-cert-v01@openssh.com
+  - ssh-ed25519
+  - ecdsa-sha2-nistp521
+  - ecdsa-sha2-nistp384
+  - ecdsa-sha2-nistp256
+# GEEN ssh-rsa meer!
+
+# Host-sleutels worden gehaald uit deze bestanden
+sshd_host_keys_files: []
+
+# De groep die eigenaar is van de host-sleutels
+sshd_host_keys_group: root
+
+# Toegangsrechten voor de host-sleutels
+sshd_host_keys_mode: "0600"
+
+# De eigenaar van de host-sleutels
+sshd_host_keys_owner: root
+
+# Schakel host-based authenticatie uit
+sshd_hostbased_authentication: false
+
+# Negeer .rhosts bestanden
+sshd_ignore_rhosts: true
+
+# Negeer user known hosts, zorgt voor strengere controle
+sshd_ignore_user_known_hosts: true
+
+# Schakel Kerberos-authenticatie uit
+sshd_kerberos_authentication: false
+
+# Gebruik sterke, moderne Kex-algoritmes
+sshd_kex_algorithms:
+  - curve25519-sha256@libssh.org
+  - ecdh-sha2-nistp521
+  - ecdh-sha2-nistp384
+  - ecdh-sha2-nistp256
+# GEEN diffie-hellman-group-exchange-sha256 meer!
+
+# Luister op alle netwerkinterfaces
+sshd_listen:
+  - 0.0.0.0
+
+# Log niveau voor SSH-verbindingen
+sshd_log_level: VERBOSE
+
+# Hoe lang de gebruiker heeft om in te loggen
+sshd_login_grace_time: 20
+
+# Gebruik sterke, moderne MAC-algoritmes (encrypt-then-mac)
+sshd_macs:
+  - hmac-sha2-512-etm@openssh.com
+  - hmac-sha2-256-etm@openssh.com
+# GEEN mac-then-encrypt meer!
+
+# Beperk toegang op basis van IP-adressen
+sshd_match_addresses: {}
+
+# Beperk toegang op basis van groepen
+sshd_match_groups: {}
+
+# Beperk toegang op basis van poorten
+sshd_match_local_ports: {}
+
+# Beperk toegang op basis van gebruikers
+sshd_match_users: {}
+
+# Maximaal aantal inlogpogingen
+sshd_max_auth_tries: 3
+
+# Maximaal aantal sessies per gebruiker
+sshd_max_sessions: 3
+
+# Maximaal aantal gelijktijdige onvoltooide verbindingen
+sshd_max_startups: 10:30:60
+
+# Sta authenticatie met wachtwoord toe
+sshd_password_authentication: true
+
+# Verbied inloggen met een leeg wachtwoord
+sshd_permit_empty_passwords: false
+
+# Sta root-login alleen toe met public key (geen wachtwoord)
+sshd_permit_root_login: yes
+
+# Schakel tunnelen uit
+sshd_permit_tunnel: false
+
+# Verbied user environment variables
+sshd_permit_user_environment: false
+
+# Poorten waar de SSH-server op luistert
+sshd_ports:
+  - 22
+
+# Toon de datum van de laatste login
+sshd_print_last_log: false
+
+# Laat de MOTD (Message of the Day) door PAM afhandelen
+sshd_print_motd: false
+
+# Schakel de PAM MOTD in
+sshd_print_pam_motd: true
+
+# Vernieuw de sleutels na een bepaalde hoeveelheid data of tijd
+sshd_rekey_limit: 512M 1h
+
+# Verplicht een minimale grootte voor ECDSA-sleutels
+sshd_required_ecdsa_size: 521
+
+# Verplicht een minimale grootte voor RSA-sleutels
+sshd_required_rsa_size: 4096
+
+# Schakel SFTP in
+sshd_sftp_enabled: true
+
+# Forceer SFTP-gebruikers in hun home-directory
+sshd_sftp_only_chroot: true
+
+# De chroot-directory is de home-directory van de gebruiker
+sshd_sftp_only_chroot_dir: "%h"
+
+# De groep voor SFTP-only gebruikers
+sshd_sftp_only_group: ""
+
+# De SFTP-subsystem configuratie
+sshd_sftp_subsystem: internal-sftp -f LOCAL6 -l INFO
+
+# Forceer strict file permissions op home-directories
+sshd_strict_modes: true
+
+# Waar SSH-gebeurtenissen worden gelogd in syslog
+sshd_syslog_facility: AUTH
+
+# Schakel TCP keep-alive uit, gebruik ClientAliveInterval
+sshd_tcp_keep_alive: false
+
+# Vertrouwde CA-sleutels voor certificaat-authenticatie
+sshd_trusted_user_ca_keys_base64: ""
+
+# Locatie van de CA-sleutels
+sshd_trusted_user_ca_keys_file: /etc/ssh/trusted-user-ca-keys.pem
+
+# Schakel automatische update van moduli uit
+sshd_update_moduli: false
+
+# Schakel reverse DNS-lookups uit
+sshd_use_dns: false
+
+# Gebruik PAM (Pluggable Authentication Modules)
+sshd_use_pam: true
+
+# Gebruik privilege-separatie voor extra beveiliging
+sshd_use_privilege_separation: sandbox
+
+# Schakel X11-forwarding uit
+sshd_x11_forwarding: false

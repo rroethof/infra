@@ -1,0 +1,19 @@
+#
+# This file is managed by Ansible.
+#
+# Defaults for the arpwatch init script.
+
+# The network interface to monitor.
+# You can list multiple interfaces, separated by spaces.
+# e.g. INTERFACES="eth0 eth1"
+INTERFACES="{{ ansible_default_ipv4.interface }}"
+
+# The user to run arpwatch as.
+RUN_AS="{{ arpwatch_run_as_user }}"
+
+# The email address to send reports to.
+MAILTO="{{ arpwatch_mailto }}"
+
+# Additional options for arpwatch.
+# See arpwatch(8) for more information.
+OPTIONS=""

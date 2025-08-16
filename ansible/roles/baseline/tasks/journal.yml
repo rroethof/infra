@@ -1,0 +1,92 @@
+---
+- name: Controleer journald tmpfiles configuratie directory
+  # Controleert de aanwezigheid van de tmpfiles configuratie directory voor journald.
+  ansible.builtin.stat:
+    path: /etc/tmpfiles.d/
+  register: tmpfiles_d
+
+- name: Stel restrictieve permissies in op journal bestanden
+  # Stelt restrictieve bestandsparmissies in voor journald logbestanden.
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/tmpfiles.d/systemd.conf
+    mode: "0644"
+    owner: root
+    group: root
+    create: true
+    block: |
+      z /run/log/journal 2640 root systemd-journal - -
+      Z /run/log/journal/%m ~2640 root systemd-journal - -
+      z /var/log/journal 2640 root systemd-journal - -
+      z /var/log/journal/%m 2640 root systemd-journal - -
+      z /var/log/journal/%m/system.journal 0640 root systemd-journal - -
+  when:
+    - tmpfiles_d.stat.exists
+
+- name: Configureer logrotate(8)
+  # Configureert logrotate voor het beheer van logbestanden.
+  become: true
+  ansible.builtin.template:
+    src: "etc/logrotate.conf.j2"
+    dest: /etc/logrotate.conf
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer cron.daily logrotate
+  # Configureert een dagelijkse cron-taak voor logrotate.
+  become: true
+  ansible.builtin.lineinfile:
+    line: /usr/sbin/logrotate /etc/logrotate.conf
+    dest: /etc/cron.daily/logrotate
+    mode: "0750"
+    state: present
+    create: true
+
+- name: Controleer rsyslog.conf
+  # Controleert de aanwezigheid van het rsyslog configuratiebestand.
+  become: true
+  ansible.builtin.stat:
+    path: /etc/rsyslog.conf
+  register: rsyslogconf
+
+- name: Controleer rsyslog.d
+  # Controleert de aanwezigheid van de rsyslog configuratie directory.
+  become: true
+  ansible.builtin.stat:
+    path: /etc/rsyslog.d
+  register: rsyslogd
+
+- name: Stel rsyslog FileCreateMode in
+  # Stelt de standaard bestandspermissies in voor nieuwe logbestanden die door rsyslog worden aangemaakt.
+  become: true
+  block:
+    - name: Configureer rsyslog.conf FileCreateMode
+      # Configureert FileCreateMode in het hoofdr syslog configuratiebestand.
+      ansible.builtin.lineinfile:
+        regexp: ^\$FileCreateMode
+        line: $FileCreateMode {{ rsyslog_filecreatemode }}
+        dest: /etc/rsyslog.conf
+        mode: "0640"
+        state: present
+        create: false
+      when:
+        - rsyslogconf.stat.exists
+      notify:
+        - Validate rsyslogd
+
+    - name: Voeg FileCreateMode bestand toe aan de rsyslog.d directory
+      # Voegt een configuratiebestand toe aan de rsyslog.d directory voor FileCreateMode.
+      ansible.builtin.lineinfile:
+        regexp: ^\$FileCreateMode
+        line: $FileCreateMode {{ rsyslog_filecreatemode }}
+        dest: /etc/rsyslog.d/99-filecreatemode.conf
+        mode: "0644"
+        state: present
+        create: true
+      when:
+        - rsyslogd.stat.exists
+        - rsyslogd.stat.isdir
+      notify:
+        - Validate rsyslogd

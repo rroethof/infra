@@ -1,0 +1,102 @@
+---
+# Fase 1: Systeemvoorbereiding & Pakketbeheer
+- name: Include facts tasks
+  ansible.builtin.include_tasks: facts.yml
+
+- name: Include spaceholder tasks
+  ansible.builtin.include_tasks: spaceholder.yml
+
+- name: Include packages tasks
+  ansible.builtin.include_tasks: packages.yml
+
+- name: Include automatic updates tasks
+  ansible.builtin.include_tasks: automatic_updates.yml
+
+- name: Include debsums tasks
+  ansible.builtin.include_tasks: debsums.yml
+
+# Fase 2: Core Systeem & Kernel Hardening
+- name: Include sysctl tasks
+  ansible.builtin.include_tasks: sysctl.yml
+
+- name: Include kernel tasks
+  ansible.builtin.include_tasks: kernel.yml
+
+- name: Include module blocklists tasks
+  ansible.builtin.include_tasks: module_blocklists.yml
+
+- name: Include mount tasks
+  ansible.builtin.include_tasks: mount.yml
+
+- name: Include systemd tasks
+  ansible.builtin.include_tasks: systemd.yml
+
+- name: Include prelink tasks
+  ansible.builtin.include_tasks: prelink.yml
+
+# Fase 3: Gebruikers, Toegangscontrole & Authenticatie
+- name: Include users tasks
+  ansible.builtin.include_tasks: users.yml
+
+- name: Include pam tasks
+  ansible.builtin.include_tasks: pam.yml
+
+- name: Include shell tasks
+  ansible.builtin.include_tasks: shell.yml
+  when: zsh_install | bool
+
+- name: Include password tasks
+  ansible.builtin.include_tasks: password.yml
+
+- name: Include sshd tasks
+  ansible.builtin.include_tasks: sshd.yml
+
+- name: Include banners tasks
+  ansible.builtin.include_tasks: banners.yml
+
+- name: Include motd
+  ansible.builtin.include_tasks: motd.yml
+
+- name: Include compilers tasks
+  ansible.builtin.include_tasks: compilers.yml
+
+- name: Include usbguard tasks
+  ansible.builtin.include_tasks: usbguard.yml
+
+- name: Include crypto policies tasks
+  ansible.builtin.include_tasks: crypto_policies.yml
+
+# Fase 4: Service & Netwerk Hardening
+- name: Include services tasks
+  ansible.builtin.include_tasks: services.yml
+
+- name: Include postfix tasks
+  ansible.builtin.include_tasks: postfix.yml
+
+- name: Include ntp tasks
+  ansible.builtin.include_tasks: ntp.yml
+
+- name: Include ipv6 tasks
+  ansible.builtin.include_tasks: ipv6.yml
+
+- name: Include arpwatch tasks
+  ansible.builtin.include_tasks: arpwatch.yml
+
+# Fase 5: Monitoring, Auditing & Scheduling
+- name: Include journal tasks
+  ansible.builtin.include_tasks: journal.yml
+
+- name: Include auditd tasks
+  ansible.builtin.include_tasks: auditd.yml
+
+- name: Include aide tasks
+  ansible.builtin.include_tasks: aide.yml
+
+- name: Include wazuh tasks
+  ansible.builtin.include_tasks: wazuh.yml
+
+- name: Include scheduled tasks
+  ansible.builtin.include_tasks: scheduled_tasks.yml
+
+- name: Include cron tasks
+  ansible.builtin.include_tasks: cron.yml

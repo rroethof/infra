@@ -1,0 +1,4 @@
+---
+arpwatch_enabled: true
+arpwatch_mailto: root
+arpwatch_run_as_user: arpwatch

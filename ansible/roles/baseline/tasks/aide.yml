@@ -1,0 +1,167 @@
+---
+- name: AIDE installatie en configuratie
+  # Installeert en configureert AIDE voor integriteitscontrole.
+  become: true
+  block:
+    - name: AIDE pakket installatie
+      # Installeert het juiste AIDE pakket voor Debian
+      ansible.builtin.package:
+        name: "{{ 'aide-common' if ansible_os_family == 'Debian' else 'aide' }}"
+        state: present
+        install_recommends: false
+
+    - name: Controleer AIDE cron.daily bestand
+      # Controleert of het cron.daily bestand bestaat, want dan is er geen service nodig.
+      ansible.builtin.stat:
+        path: /etc/cron.daily/aide
+      register: aidecron
+
+    - name: Installeer AIDE systemd service
+      # Maakt de service-eenheid voor AIDE.
+      ansible.builtin.template:
+        src: lib/systemd/system/aidecheck.service.j2
+        dest: /lib/systemd/system/aidecheck.service
+        backup: true
+        mode: "0644"
+        owner: root
+        group: root
+      when: not aidecron.stat.exists
+
+    - name: Installeer AIDE systemd timer
+      # Maakt de timer-eenheid voor AIDE om periodieke controles te plannen.
+      ansible.builtin.template:
+        src: lib/systemd/system/aidecheck.timer.j2
+        dest: /lib/systemd/system/aidecheck.timer
+        backup: true
+        mode: "0644"
+        owner: root
+        group: root
+      when: not aidecron.stat.exists
+      notify:
+        - Reload systemd
+        - Enable aidecheck
+
+    - name: Configureer AIDE checksums
+      # Stelt de gewenste checksum-algoritmen in.
+      ansible.builtin.lineinfile:
+        path: "{{ '/etc/aide/aide.conf' if ansible_os_family == 'Debian' else '/etc/aide.conf' }}"
+        state: present
+        regexp: ^Checksums =
+        line: Checksums = {{ aide_checksums }}
+        mode: "0640"
+        create: false
+        validate: aide --config-check --config=%s
+
+    - name: Ontdek AIDE include directory
+      # Zoekt het pad naar de 'include' map. Dit is handig voor modulaire configuratie.
+      ansible.builtin.command:
+        cmd: grep -m1 -E "^@@(x_include|include) /" "{{ '/etc/aide/aide.conf' if ansible_os_family == 'Debian' else '/etc/aide.conf' }}"
+      register: grep_aide_include
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Stel AIDE include directory in als fact
+      # Slaat het gevonden pad op voor later gebruik.
+      ansible.builtin.set_fact:
+        aide_include_d: "{{ 'false' if grep_aide_include.rc != 0 else grep_aide_include.stdout.split()[1] }}"
+
+    - name: Controleer of AIDE include directory bestaat
+      # Controleert of de include directory daadwerkelijk bestaat.
+      ansible.builtin.stat:
+        path: "{{ aide_include_d }}"
+      register: aide_config_d
+
+    - name: Voeg auditd regels toe in de include directory
+      # Voegt de regels voor auditd tools toe aan de modulaire configuratie.
+      ansible.builtin.lineinfile:
+        path: "{{ aide_include_d }}/99_aide_auditd"
+        state: present
+        line: "{{ item }} p+i+n+u+g+s+b+acl+xattrs+sha512"
+        mode: "0640"
+        owner: root
+        group: root
+        create: true
+        validate: aide --config-check --config=%s
+      loop:
+        - /usr/sbin/auditctl
+        - /usr/sbin/auditd
+        - /usr/sbin/ausearch
+        - /usr/sbin/aureport
+        - /usr/sbin/autrace
+        - /usr/sbin/augenrules
+      when: aide_config_d.stat.exists
+
+    - name: Voeg directory uitsluitingen toe in de include directory
+      # Voegt de uitsluitingen toe aan de modulaire configuratie.
+      ansible.builtin.lineinfile:
+        path: "{{ aide_include_d }}/99_aide_exclusions"
+        line: "!{{ item }}"
+        state: present
+        mode: "0640"
+        owner: root
+        group: root
+        create: true
+        validate: aide --config-check --config=%s
+      with_items:
+        - "{{ aide_dir_exclusions }}"
+      when: aide_config_d.stat.exists
+
+    - name: Voeg auditd regels direct toe aan de hoofdconfiguratie
+      # Doet hetzelfde als hierboven, maar dan direct in het hoofdconfiguratiebestand als er geen include directory is.
+      ansible.builtin.lineinfile:
+        path: "{{ '/etc/aide/aide.conf' if ansible_os_family == 'Debian' else '/etc/aide.conf' }}"
+        state: present
+        regexp: ^[# ]*{{ item }}
+        line: "{{ item }} p+i+n+u+g+s+b+acl+xattrs+sha512"
+        mode: "0640"
+        create: false
+        validate: aide --config-check --config=%s
+      loop:
+        - /usr/sbin/auditctl
+        - /usr/sbin/auditd
+        - /usr/sbin/ausearch
+        - /usr/sbin/aureport
+        - /usr/sbin/autrace
+        - /usr/sbin/augenrules
+      when: not aide_config_d.stat.exists
+
+    - name: Voeg directory uitsluitingen direct toe aan de hoofdconfiguratie
+      # Doet hetzelfde als hierboven, maar dan direct in het hoofdconfiguratiebestand als er geen include directory is.
+      ansible.builtin.lineinfile:
+        path: "{{ '/etc/aide/aide.conf' if ansible_os_family == 'Debian' else '/etc/aide.conf' }}"
+        line: "!{{ item }}"
+        state: present
+        mode: "0640"
+        create: false
+        validate: aide --config-check --config=%s
+      with_items:
+        - "{{ aide_dir_exclusions }}"
+      when: not aide_config_d.stat.exists
+
+    - name: Controleer of de AIDE-database bestaat
+      # Checkt of er een database is.
+      ansible.builtin.stat:
+        path: /var/lib/aide/aide.db
+      register: aide_db
+
+    - name: Initialiseer de AIDE-database
+      # Genereert en activeert de initiële database als deze niet bestaat.
+      when: not aide_db.stat.exists
+      block:
+        - name: Genereer nieuwe AIDE-database
+          become: true
+          ansible.builtin.command:
+            cmd: "aide --init --config {{ '/etc/aide/aide.conf' if ansible_os_family == 'Debian' else '/etc/aide.conf' }}"
+          changed_when: true
+
+        - name: Activeer de nieuwe AIDE-database
+          become: true
+          ansible.builtin.copy:
+            src: /var/lib/aide/aide.db.new
+            dest: /var/lib/aide/aide.db
+            remote_src: true
+            owner: root
+            group: root
+            mode: '0600'
+          changed_when: true

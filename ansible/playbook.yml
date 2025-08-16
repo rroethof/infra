@@ -1,0 +1,7 @@
+---
+- name: Build Hardened Debian VM
+  hosts: all
+  become: true
+
+  roles:
+    - baseline

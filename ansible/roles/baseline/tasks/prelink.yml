@@ -1,0 +1,26 @@
+---
+# Configureer sysconfig prelink
+- name: Configureer sysconfig prelink
+  ansible.builtin.stat:
+    path: /etc/sysconfig/prelink
+  register: sysconfig_prelink
+
+# Controleer prelink configuratiebestand
+- name: Controleer prelink configuratiebestand
+  ansible.builtin.stat:
+    path: /etc/prelink.configuratiebestand
+  register: etc_prelink
+
+# Keer terug naar niet-prelinked staat
+- name: Keer terug naar niet-prelinked staat
+  become: true
+  ansible.builtin.command:
+    cmd: "prelink -ua"
+  register: nonprelinked_state
+  changed_when: nonprelinked_state.rc != 0
+  failed_when: nonprelinked_state.rc != 0
+  when: >
+    sysconfig_prelink.stat.exists or
+    etc_prelink.stat.exists
+
+

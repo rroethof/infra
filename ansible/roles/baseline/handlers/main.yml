@@ -1,0 +1,203 @@
+---
+- name: Restart Debian auditd
+  become: true
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+  ignore_errors: true
+  tags:
+    - CCE-80872-5
+
+- name: Generate auditd rules
+  become: true
+  ansible.builtin.command:
+    cmd: augenrules
+  register: augenrules_handler
+  changed_when: augenrules_handler.rc == 0
+
+- name: Restart sysctl
+  become: true
+  ansible.builtin.service:
+    name: systemd-sysctl
+    state: restarted
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Reload systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Run rkhunter propupd
+  become: true
+  ansible.builtin.command:
+    cmd: rkhunter --propupd
+  register: rkhunter_propupd
+  changed_when: rkhunter_propupd.rc == 0
+
+- name: Update rkhunter databases
+  become: true
+  ansible.builtin.command:
+    cmd: rkhunter --update
+  register: rkhunter_update
+  changed_when:
+    - rkhunter_update.rc == 0
+    - rkhunter_update.rc == 2
+  failed_when:
+    - rkhunter_update.rc == 1
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Enable aidecheck
+  become: true
+  ansible.builtin.systemd:
+    name: aidecheck.timer
+    enabled: true
+    state: started
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Disable aidecheck
+  become: true
+  ansible.builtin.systemd:
+    name: aidecheck.timer
+    state: stopped
+    enabled: false
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Mask aidecheck
+  become: true
+  ansible.builtin.systemd:
+    name: aidecheck.timer
+    masked: true
+    state: stopped
+    enabled: false
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Restart ssh service
+  become: true
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+  register: ssh_service
+  failed_when:
+    - ssh_service is not success
+    - not 'Could not find the requested service' in ssh_service.msg
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Restart sshd service
+  become: true
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+  register: sshd_service
+  failed_when:
+    - sshd_service is not success
+    - not 'Could not find the requested service' in sshd_service.msg
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Restart Postfix
+  become: true
+  ansible.builtin.service:
+    name: postfix
+    state: restarted
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Restart arpwatch
+  become: true
+  ansible.builtin.service:
+    name: arpwatch
+    state: restarted
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Enable and start Wazuh agent
+  become: true
+  ansible.builtin.service:
+    name: wazuh-agent
+    state: started
+    enabled: true
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Run apt-get autoremove
+  become: true
+  ansible.builtin.apt:
+    autoremove: true
+
+- name: Run apt-get clean
+  become: true
+  ansible.builtin.apt:
+    autoclean: true
+    clean: true
+
+- name: Mask apport
+  become: true
+  ansible.builtin.systemd:
+    name: apport.service
+    masked: true
+    enabled: false
+    state: stopped
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Enable haveged
+  become: true
+  ansible.builtin.systemd:
+    name: haveged
+    enabled: true
+    state: started
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Reboot node
+  become: true
+  ansible.builtin.reboot:
+    pre_reboot_delay: "{{ 3600 | random(start=1) }}"
+
+- name: Update Debian cracklib
+  become: true
+  ansible.builtin.shell: |
+    update-cracklib
+  register: update_debian_cracklib
+  changed_when: update_debian_cracklib.rc == 0
+
+- name: Update GRUB
+  become: true
+  ansible.builtin.command:
+    cmd: update-grub
+  register: update_grub
+  changed_when: update_grub.rc == 0
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Update GRUB2
+  become: true
+  ansible.builtin.command:
+    cmd: grub2-mkconfig
+  register: update_grub2
+  changed_when: update_grub2.rc == 0
+  when:
+    - ansible_virtualization_type not in ["container", "docker", "podman"]
+
+- name: Validate rsyslogd
+  become: true
+  ansible.builtin.command:
+    cmd: rsyslogd -N3 -f /etc/rsyslog.conf
+  register: validate_rsyslogd
+  changed_when: validate_rsyslogd.rc == 0
+
+- name: restart fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted
+  when: service_default_state | default('started') == 'started'

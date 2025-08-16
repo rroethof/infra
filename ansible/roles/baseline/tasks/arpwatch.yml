@@ -1,0 +1,20 @@
+---
+- name: Configure arpwatch
+  become: true
+  when: arpwatch_enabled | default(true)
+  block:
+    - name: Configure /etc/default/arpwatch
+      ansible.builtin.template:
+        src: etc/default/arpwatch.j2
+        dest: /etc/default/arpwatch
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - Restart arpwatch
+
+    - name: Ensure arpwatch service is running and enabled
+      ansible.builtin.service:
+        name: arpwatch
+        state: started
+        enabled: true

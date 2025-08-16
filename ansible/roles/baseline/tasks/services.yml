@@ -1,0 +1,7 @@
+---
+- name: Deactiveer onnodige services
+  # Deactiveert services die doorgaans niet nodig zijn op een geharde server.
+  # Avahi is voor zero-configuration networking en is zelden nodig.
+  become: true
+  ansible.builtin.systemd:
+    name: avahi-daemon.service

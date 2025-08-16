@@ -1,0 +1,21 @@
+---
+- name: Plan een dagelijkse rkhunter scan
+  # Voegt een cron-taak toe om dagelijks te scannen op rootkits.
+  become: true
+  ansible.builtin.cron:
+    name: "Rkhunter scan"
+    hour: "5"
+    minute: "0"
+    job: "/usr/bin/rkhunter --check --cronjob --quiet"
+    user: root
+
+- name: Plan een wekelijkse rkhunter database update
+  # Voegt een cron-taak toe om de rkhunter-database wekelijks bij te werken.
+  become: true
+  ansible.builtin.cron:
+    name: "Rkhunter update"
+    weekday: "0" # Zondag
+    hour: "5"
+    minute: "30"
+    job: "/usr/bin/rkhunter --update"
+    user: root

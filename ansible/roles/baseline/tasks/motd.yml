@@ -1,0 +1,16 @@
+---
+- name: Update message of the day
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/etc/update-motd.d/{{ (item | basename | splitext)[0] }}"
+    mode: 0755
+    owner: root
+    group: root
+  with_fileglob:
+    - templates/update-motd.d/*
+
+- name: Remove static /etc/motd file
+  become: true
+  ansible.builtin.file:
+    path: /etc/motd
+    state: absent

@@ -1,0 +1,39 @@
+---
+- name: Zorg ervoor dat Zsh en Git geïnstalleerd zijn
+  become: true
+  ansible.builtin.apt:
+    name:
+      - zsh
+      - git
+    state: present
+    update_cache: true
+
+- name: Haal het pad van Zsh op
+  ansible.builtin.shell:
+    cmd: "command -v zsh"
+  register: zsh_installed_path
+  changed_when: false
+  check_mode: false
+  failed_when: zsh_installed_path.rc > 1
+
+- name: Configureer Zsh en Oh My Zsh voor gebruikers
+  ansible.builtin.include_tasks: shell_user_config.yml
+  loop: "{{ zsh_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - zsh_installed_path.rc == 0
+    - zsh_users is defined
+    - zsh_users | length > 0
+
+- name: Plaats een standaard .zshrc in /etc/skel voor nieuwe gebruikers
+  become: true
+  ansible.builtin.template:
+    src: "{{ zsh_omz_zshrc_template }}"
+    dest: "/etc/skel/.zshrc"
+    force: true # Zorg ervoor dat de skel-versie altijd up-to-date is
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - zsh_omz_populate_skel | bool

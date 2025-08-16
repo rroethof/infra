@@ -1,0 +1,28 @@
+---
+- name: Installeer en configureer Wazuh Agent
+  become: true
+  when: wazuh_agent_enabled | default(false)
+  block:
+    - name: Download Wazuh Agent .deb package
+      ansible.builtin.get_url:
+        url: "{{ wazuh_agent_deb_url }}"
+        dest: "{{ wazuh_agent_deb_path }}"
+        mode: '0644'
+
+    - name: Installeer Wazuh Agent en configureer met environment variabelen
+      # Gebruikt de 'apt' module om het lokale .deb bestand te installeren.
+      # De 'environment' sleutel geeft de nodige variabelen door aan het installatiescript.
+      ansible.builtin.apt:
+        deb: "{{ wazuh_agent_deb_path }}"
+        state: present
+      environment:
+        WAZUH_MANAGER: "{{ wazuh_manager_ip }}"
+        WAZUH_AGENT_GROUP: "{{ wazuh_agent_group }}"
+        WAZUH_AGENT_NAME: "{{ wazuh_agent_name }}"
+      notify:
+        - Enable and start Wazuh agent
+
+    - name: Ruim het gedownloade Wazuh Agent .deb pakket op
+      ansible.builtin.file:
+        path: "{{ wazuh_agent_deb_path }}"
+        state: absent

@@ -1,0 +1,28 @@
+---
+- name: Blacklist ongebruikte kernel modules (fs, misc)
+  # Voorkomt het automatisch laden van ongebruikte bestandssysteem en diverse modules.
+  # Deze kunnen nog steeds handmatig geladen worden indien nodig.
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/99-hardening-blacklist.conf
+    line: "blacklist {{ item }}"
+    mode: "0644"
+    owner: root
+    group: root
+    state: present
+    create: true
+  loop: "{{ fs_modules_blocklist + misc_modules_blocklist }}"
+
+- name: Deactiveer ongebruikte netwerkprotocol modules
+  # Voorkomt het laden van ongebruikte netwerkprotocollen door 'install' te overschrijven.
+  # Dit is een sterkere methode dan 'blacklist'.
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/99-hardening-blacklist.conf
+    line: "install {{ item }} /bin/true"
+    mode: "0644"
+    owner: root
+    group: root
+    state: present
+    create: true
+  loop: "{{ net_modules_blocklist }}"

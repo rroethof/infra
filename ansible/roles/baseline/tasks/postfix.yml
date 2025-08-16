@@ -1,0 +1,22 @@
+---
+- name: Harden Postfix SMTP Banner
+  # Verbergt de Postfix-versie in de SMTP-banner om informatielekken te voorkomen.
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^smtpd_banner ='
+    line: 'smtpd_banner = $myhostname ESMTP'
+    state: present
+  notify:
+    - Restart Postfix
+
+- name: Disable Postfix VRFY command
+  # Schakelt het VRFY-commando uit om het enumereren van gebruikersnamen te voorkomen.
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^disable_vrfy_command\s*='
+    line: 'disable_vrfy_command = yes'
+    state: present
+  notify:
+    - Restart Postfix

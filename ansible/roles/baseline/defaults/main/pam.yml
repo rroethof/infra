@@ -1,0 +1,3 @@
+---
+# Toon de MOTD bij lokale console-logins via PAM
+login_print_pam_motd: true

@@ -1,0 +1,30 @@
+---
+- name: "Stel Zsh in als de shell voor {{ item.name }}"
+  become: true
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    shell: "{{ zsh_installed_path.stdout }}"
+
+- name: "Installeer of update Oh My Zsh voor {{ item.name }}"
+  when: item.install_omz | default(zsh_install_omz) | bool
+  become: true
+  become_user: "{{ item.name }}"
+  block:
+    - name: "Kloon of update Oh My Zsh repository"
+      ansible.builtin.git:
+        repo: "{{ zsh_omz_git_repo | default('https://github.com/ohmyzsh/ohmyzsh.git') }}"
+        dest: "~/{{ zsh_omz_install_dir | default('.oh-my-zsh') }}"
+        version: master
+        update: "{{ zsh_omz_git_update | default(true) | bool }}"
+        accept_hostkey: true
+
+    - name: "Beheer .zshrc met een template"
+      when: item.manage_zshrc | default(zsh_omz_manage_zshrc) | bool
+      ansible.builtin.template:
+        src: "{{ zsh_omz_zshrc_template }}"
+        dest: "~/.zshrc"
+        force: "{{ item.force_zshrc | default(zsh_omz_zshrc_force) | bool }}"
+        backup: "{{ zsh_omz_backup_zshrc | default(true) | bool }}"
+        owner: "{{ item.name }}"
+        group: "{{ item.group | default(item.name) }}"
+        mode: '0644'

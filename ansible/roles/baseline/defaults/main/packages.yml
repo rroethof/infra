@@ -1,0 +1,53 @@
+---
+packages_blocklist:
+  - autofs
+  - avahi*
+  - avahi-*
+  - beep
+  - git
+  - pastebinit
+  - popularity-contest
+  - prelink
+  - rpcbind
+  - rsh*
+  - rsync
+  - talk*
+  - telnet*
+  - tftp*
+  - tuned
+  - whoopsie
+  - xinetd
+  - yp-tools
+  - ypbind
+
+packages_install:
+  - acct
+  - apparmor-profiles
+  - apparmor-utils
+  - audispd-plugins
+  - arpwatch
+  - auditd
+  - cracklib-runtime
+  - debsums
+  - gnupg2
+  - haveged
+  - libpam-apparmor
+  - libpam-cap
+  - libpam-modules
+  - libpam-pwquality
+  - libpam-tmpdir
+  - lsb-release
+  - needrestart
+  - openssh-server
+  - postfix
+  - rsyslog
+  - sysstat
+  - systemd-journal-remote
+  - tcpd
+  - apt-listbugs
+  - debsums
+  - apt-show-versions
+  - rkhunter
+  - chkrootkit
+  - lolcat
+  - figlet

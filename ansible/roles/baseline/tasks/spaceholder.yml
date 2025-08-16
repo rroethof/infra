@@ -1,0 +1,39 @@
+---
+- name: Controleer of de spaceholder LV bestaat
+  command: "lvdisplay /dev/vg0/spaceholder"
+  register: lv_check
+  ignore_errors: true
+
+- name: Verwijder spaceholder LV als deze bestaat
+  lvol:
+    vg: vg0
+    lv: spaceholder
+    state: absent
+    force: yes
+  when: lv_check.rc == 0
+  register: lv_remove_result
+
+- name: Verwijder spaceholder van /etc/fstab als het er is
+  lineinfile:
+    path: /etc/fstab
+    state: absent
+    line: '^.* /spaceholder .*'
+  when: lv_check.rc == 0
+  ignore_errors: true
+
+- name: Werk initramfs bij
+  command: update-initramfs -u
+  when: lv_check.rc == 0
+  ignore_errors: true
+
+- name: Werk grub bij
+  command: update-grub
+  when: lv_check.rc == 0
+  ignore_errors: true
+
+- name: Controleer of de LV is verwijderd voordat we herstarten
+  command: "lvdisplay /dev/vg0/spaceholder"
+  register: lv_check_final
+  failed_when: lv_check_final.rc == 0
+  when: lv_check.rc == 0
+  ignore_errors: true

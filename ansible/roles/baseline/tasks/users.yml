@@ -1,0 +1,94 @@
+- name: Configureer hosts.allow
+  become: true
+  ansible.builtin.template:
+    src: "etc/hosts.allow.j2"
+    dest: /etc/hosts.allow
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer hosts.deny
+  become: true
+  ansible.builtin.template:
+    src: "etc/hosts.deny.j2"
+    dest: /etc/hosts.deny
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer login.defs
+  become: true
+  ansible.builtin.template:
+    src: "etc/login.defs.j2"
+    dest: /etc/login.defs
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Configureer limits.conf
+  become: true
+  ansible.builtin.template:
+    src: "etc/security/limits.conf.j2"
+    dest: /etc/security/limits.conf
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Voeg configuratiebestand toe voor adduser en addgroup
+  become: true
+  ansible.builtin.template:
+    src: "etc/adduser.conf.j2"
+    dest: /etc/adduser.conf
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Voeg configuratiebestand toe voor useradd
+  become: true
+  ansible.builtin.template:
+    src: "etc/default/useradd.j2"
+    dest: /etc/default/useradd
+    backup: true
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Controleer en schoon /etc/securetty op
+  become: true
+  block:
+    - name: Controleer securetty
+      ansible.builtin.stat:
+        path: /etc/securetty
+      register: etc_securetty
+
+    - name: Schoon securetty op
+      ansible.builtin.lineinfile:
+        path: /etc/securetty
+        regexp: '^(?!console).*'
+        state: absent
+      when:
+        - etc_securetty.stat.exists
+
+    - name: Sta console toe in securetty
+      ansible.builtin.lineinfile:
+        path: /etc/securetty
+        line: console
+        mode: "0644"
+        state: present
+      when:
+        - etc_securetty.stat.exists
+
+- name: Disable core dumps for all users via profile script
+  # Zorgt ervoor dat core dumps worden uitgeschakeld voor alle gebruikers bij het inloggen.
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/profile.d/99-hardening-coredump.sh
+    content: "ulimit -c 0"
+    owner: root
+    group: root
+    mode: '0644'

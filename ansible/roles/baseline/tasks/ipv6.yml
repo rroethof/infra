@@ -1,0 +1,25 @@
+---
+- name: Stel Debian ipv6.disable GRUB cmdline in
+  # Voegt een parameter toe aan de GRUB commandline om IPv6 uit te schakelen op Debian-systemen.
+  become: true
+  ansible.builtin.lineinfile:
+    line: GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX ipv6.disable=1"
+    dest: /etc/default/grub.d/99-hardening-ipv6.cfg
+    state: present
+    create: true
+    mode: "0640"
+    owner: root
+    group: root
+  notify:
+    - Update GRUB
+
+- name: Verwijder ipv6 sysctl bestand als machine geen ipv6 ondersteunt
+  # Zorgt ervoor dat het IPv6 sysctl configuratiebestand wordt verwijderd als de machine geen IPv6 ondersteunt.
+  become: true
+  ansible.builtin.file:
+    path: "{{ sysctl_conf_dir }}/zz-ipv6-hardening.conf"
+    state: absent
+  when:
+    - not system_has_ipv6
+  notify:
+    - Restart sysctl
