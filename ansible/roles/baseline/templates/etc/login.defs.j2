@@ -5,10 +5,8 @@
 # See login.defs(5) for more information
 
 CHFN_RESTRICT rwh
-DEFAULT_HOME no
+DEFAULT_HOME yes
 ENCRYPT_METHOD {{ password_algorithm | upper }}
-ENV_PATH PATH=/usr/local/bin:/usr/sbin:/usr/bin:/bin:/snap/bin
-ENV_SUPATH PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 ERASECHAR 0177
 FAILLOG_ENAB yes
 FTMP_FILE /var/log/btmp
@@ -37,4 +35,4 @@ TTYPERM 0600
 UID_MAX 60000
 UID_MIN 1000
 UMASK {{ umask_value }}
-USERGROUPS_ENAB no
+USERGROUPS_ENAB yes
